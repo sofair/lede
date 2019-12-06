@@ -2,18 +2,26 @@ local ucursor = require "luci.model.uci".cursor()
 local json = require "luci.jsonc"
 local server_section = arg[1]
 local server = ucursor:get_all("v2ray_server", server_section)
-
+local v2ray
 local proset
 
+if server.protocol -= "custom" then
 if server.protocol == "vmess" then
+    local ids={}
+    local sep=","
+    for str in string.gmatch(server.VMess_id, "([^"..sep.."]+)") do
+	    ids[#ids+1]=str
+    end
+    local clients = {}
+    for _, id in ipairs(ids) do
+        clients[#clients+1]={id = id,
+                               alterId = tonumber(server.VMess_alterId),
+                               level = tonumber(server.VMess_level)
+                               }
+    end
+
     proset = {
-			clients = {
-				{
-					id = server.VMess_id,
-					alterId = tonumber(server.VMess_alterId),
-					level = tonumber(server.VMess_level)
-				}
-			}
+			clients = clients
 		}
 else
     proset = {
@@ -28,7 +36,7 @@ else
 end
 
 
-local v2ray = {
+v2ray = {
 	log = {
 		--error = "/var/log/v2ray.log",
 		loglevel = "warning"
@@ -79,4 +87,7 @@ local v2ray = {
 		}
 	}
 }
+else
+v2ray=json.parse(server.custom_config)
+end
 print(json.stringify(v2ray,1))

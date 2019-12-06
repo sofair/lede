@@ -32,6 +32,7 @@ e.default=10086
 e=t:option(ListValue,"protocol",translate("Protocol"))
 e:value("vmess",translate("Vmess"))
 e:value("socks",translate("Socks"))
+e:value("custom",translate("Custom"))
 
 e=t:option(Value,"VMess_id",translate("ID"))
 e.default=luci.sys.exec("cat /proc/sys/kernel/random/uuid")
@@ -101,5 +102,7 @@ e:depends("transport","quic")
 e=t:option(ListValue,"quic_guise",translate("Camouflage Type"))
 for a,t in ipairs(o)do e:value(t)end
 e:depends("transport","quic")
+e=t:option(TextValue, "custom_config", translate("Cutome Config File"))
+e:depends("protocol","custom")
 
 return a
