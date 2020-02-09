@@ -23,13 +23,23 @@ if server.protocol == "vmess" then
     proset = {
 			clients = clients
 		}
+elseif server.protocol == "http" then
+	proset = {
+			allowTransparent = false,
+			accounts = {
+				{
+					user = (server.Http_user == nil) and "lean" or server.Http_user,
+					pass = (server.Http_pass == nil) and "password" or server.Http_pass
+				}
+			}
+		}
 else
     proset = {
 			auth = "password",
 			accounts = {
 				{
-					user = server.Socks_user,
-					pass = server.Socks_pass
+					user = (server.Socks_user == nil) and "lean" or server.Socks_user,
+					pass = (server.Socks_pass == nil) and "password" or server.Socks_pass
 				}
 			}
 		}
@@ -41,12 +51,12 @@ v2ray = {
 		--error = "/var/log/v2ray.log",
 		loglevel = "warning"
 	},
-	-- 传入连接
+	-- 浼犲叆杩炴帴
 	inbound = {
 		port = tonumber(server.port),
 		protocol = server.protocol,
 		settings = proset,
-		-- 底层传输配置
+		-- 搴曞眰浼犺緭閰嶇疆
 		streamSettings = {
 			network = server.transport,
 			security = (server.tls == '1') and "tls" or "none",
@@ -75,11 +85,11 @@ v2ray = {
 			} or nil
 		}
 	},
-	-- 传出连接
+	-- 浼犲嚭杩炴帴
 	outbound = {
 		protocol = "freedom"
 	},
-	-- 额外传出连接
+	-- 棰濆浼犲嚭杩炴帴
 	outboundDetour = {
 		{
 			protocol = "blackhole",

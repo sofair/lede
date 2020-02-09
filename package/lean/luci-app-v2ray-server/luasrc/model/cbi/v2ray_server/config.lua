@@ -32,6 +32,7 @@ e.default=10086
 e=t:option(ListValue,"protocol",translate("Protocol"))
 e:value("vmess",translate("Vmess"))
 e:value("socks",translate("Socks"))
+e:value("http",translate("Http"))
 e:value("custom",translate("Custom"))
 
 e=t:option(Value,"VMess_id",translate("ID"))
@@ -54,6 +55,17 @@ e.default="password"
 e.rmempty=true
 e.password=true
 e:depends("protocol","socks")
+
+e=t:option(Value,"Http_user",translate("User name"))
+e.default="lean"
+e.rmempty=true
+e:depends("protocol","http")
+
+e=t:option(Value,"Http_pass",translate("Password"))
+e.default="password"
+e.rmempty=true
+e.password=true
+e:depends("protocol","http")
 
 e=t:option(Value,"VMess_level",translate("User Level"))
 e.default=1
