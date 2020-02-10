@@ -5,7 +5,7 @@ local server = ucursor:get_all("v2ray_server", server_section)
 local v2ray
 local proset
 
-if server.protocol -= "custom" then
+if server.protocol ~= "custom" then
 if server.protocol == "vmess" then
     local ids={}
     local sep=","
