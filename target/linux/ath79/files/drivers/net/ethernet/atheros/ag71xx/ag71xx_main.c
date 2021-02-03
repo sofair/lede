@@ -688,6 +688,8 @@ static void ath79_mii0_ctrl_set_if(struct ag71xx *ag)
 		break;
 	case PHY_INTERFACE_MODE_RGMII:
 	case PHY_INTERFACE_MODE_RGMII_ID:
+	case PHY_INTERFACE_MODE_RGMII_RXID:
+	case PHY_INTERFACE_MODE_RGMII_TXID:
 		mii_if = AR71XX_MII0_CTRL_IF_RGMII;
 		break;
 	case PHY_INTERFACE_MODE_RMII:
@@ -711,6 +713,8 @@ static void ath79_mii1_ctrl_set_if(struct ag71xx *ag)
 		break;
 	case PHY_INTERFACE_MODE_RGMII:
 	case PHY_INTERFACE_MODE_RGMII_ID:
+	case PHY_INTERFACE_MODE_RGMII_RXID:
+	case PHY_INTERFACE_MODE_RGMII_TXID:
 		mii_if = AR71XX_MII1_CTRL_IF_RGMII;
 		break;
 	default:
@@ -1080,16 +1084,9 @@ static int ag71xx_do_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 	return -EOPNOTSUPP;
 }
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0))
-static void ag71xx_oom_timer_handler(unsigned long data)
-{
-	struct net_device *dev = (struct net_device *) data;
-	struct ag71xx *ag = netdev_priv(dev);
-#else
 static void ag71xx_oom_timer_handler(struct timer_list *t)
 {
 	struct ag71xx *ag = from_timer(ag, t, oom_timer);
-#endif
 
 	napi_schedule(&ag->napi);
 }
@@ -1214,14 +1211,14 @@ static int ag71xx_rx_packets(struct ag71xx *ag, int limit)
 	unsigned int offset = ag->rx_buf_offset;
 	int ring_mask = BIT(ring->order) - 1;
 	int ring_size = BIT(ring->order);
-	struct sk_buff_head queue;
+	struct list_head rx_list;
+	struct sk_buff *next;
 	struct sk_buff *skb;
 	int done = 0;
 
 	DBG("%s: rx packets, limit=%d, curr=%u, dirty=%u\n",
 			dev->name, limit, ring->curr, ring->dirty);
-
-	skb_queue_head_init(&queue);
+	INIT_LIST_HEAD(&rx_list);
 
 	while (done < limit) {
 		unsigned int i = ring->curr & ring_mask;
@@ -1263,7 +1260,7 @@ static int ag71xx_rx_packets(struct ag71xx *ag, int limit)
 		} else {
 			skb->dev = dev;
 			skb->ip_summed = CHECKSUM_NONE;
-			__skb_queue_tail(&queue, skb);
+			list_add_tail(&skb->list, &rx_list);
 		}
 
 next:
@@ -1275,10 +1272,9 @@ next:
 
 	ag71xx_ring_rx_refill(ag);
 
-	while ((skb = __skb_dequeue(&queue)) != NULL) {
+	list_for_each_entry_safe(skb, next, &rx_list, list)
 		skb->protocol = eth_type_trans(skb, dev);
-		netif_receive_skb(skb);
-	}
+	netif_receive_skb_list(&rx_list);
 
 	DBG("%s: rx finish, curr=%u, dirty=%u, done=%d\n",
 		dev->name, ring->curr, ring->dirty, done);
@@ -1502,13 +1498,7 @@ static int ag71xx_probe(struct platform_device *pdev)
 
 	INIT_DELAYED_WORK(&ag->restart_work, ag71xx_restart_work_func);
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0))
-	init_timer(&ag->oom_timer);
-	ag->oom_timer.data = (unsigned long) dev;
-	ag->oom_timer.function = ag71xx_oom_timer_handler;
-#else
 	timer_setup(&ag->oom_timer, ag71xx_oom_timer_handler, 0);
-#endif
 
 	tx_size = AG71XX_TX_RING_SIZE_DEFAULT;
 	ag->rx_ring.order = ag71xx_ring_size_order(AG71XX_RX_RING_SIZE_DEFAULT);
@@ -1563,11 +1553,11 @@ static int ag71xx_probe(struct platform_device *pdev)
 	ag->stop_desc->next = (u32) ag->stop_desc_dma;
 
 	mac_addr = of_get_mac_address(np);
-	if (mac_addr)
-		memcpy(dev->dev_addr, mac_addr, ETH_ALEN);
-	if (!mac_addr || !is_valid_ether_addr(dev->dev_addr)) {
+	if (IS_ERR_OR_NULL(mac_addr) || !is_valid_ether_addr(mac_addr)) {
 		dev_err(&pdev->dev, "invalid MAC address, using random address\n");
 		eth_random_addr(dev->dev_addr);
+	} else {
+		memcpy(dev->dev_addr, mac_addr, ETH_ALEN);
 	}
 
 	ag->phy_if_mode = of_get_phy_mode(np);
