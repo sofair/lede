@@ -1,4 +1,5 @@
 module("luci.model.cbi.v2ray_server.api.gen_config", package.seeall)
+local json = require "luci.jsonc"
 
 function gen_config(user)
     local settings = nil
@@ -6,6 +7,11 @@ function gen_config(user)
     local outbounds = {
         {protocol = "freedom", tag = "direct"}, {protocol = "blackhole", tag = "blocked"}
     }
+
+    if user.protocol == "custom" then
+        local config = json.parse(user.custom_config)
+        return config
+    end
 
     if user.protocol == "vmess" or user.protocol == "vless" then
         if user.uuid then

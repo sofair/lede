@@ -32,6 +32,7 @@ protocol:value("socks", "Socks")
 protocol:value("shadowsocks", "Shadowsocks")
 protocol:value("trojan", "Trojan")
 protocol:value("mtproto", "MTProto")
+protocol:value("custom", translate("Custom"))
 
 port = s:option(Value, "port", translate("Port"))
 port.datatype = "port"
@@ -311,5 +312,8 @@ bind_local.default = "0"
 accept_lan = s:option(Flag, "accept_lan", translate("Accept LAN Access"), translate("When selected, it can accessed lan , this will not be safe!"))
 accept_lan.default = "0"
 accept_lan.rmempty = false
+
+custom_config = s:option(TextValue, "custom_config", translate("Cutome config file content"))
+custom_config:depends({ protocol = "custom" })
 
 return m
